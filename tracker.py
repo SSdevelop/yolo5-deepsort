@@ -64,7 +64,7 @@ def plot_bboxes(
     )  # line/font thickness
 
     def check_lost(image, person, suitcase, target_detector):
-        # what is lost?
+        # definition_of_lost = either vertical or horizontal distance between the detected person and suitcase > a constant
         # image has person, suitcase, and 
         # target_detector.personAndSuitcaseLostCounter > 30
         if person is None or suitcase is None:
@@ -106,7 +106,7 @@ def plot_bboxes(
             # pytest.set_trace()
         return image
 
-    # This can only handle scenarios where there is only
+    # without face recognition, can only handle scenarios where there is only
     # 1 person and 1 suit case,
     # mark suite case as lost when distance is larger than 0.5m.
 
@@ -163,7 +163,7 @@ def plot_bboxes(
     person_gravity_center = None
     suitcase_gravity_center = None
     import pytest
-    pytest.set_trace()
+    # pytest.set_trace()
     for bbox in bboxes:
         # cls_id can be only person or suitcase
         (x1, y1, x2, y2, cls_id, pos_id) = bbox

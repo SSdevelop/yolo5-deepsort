@@ -7,14 +7,11 @@ def main():
     name = 'demo'
 
     det = Detector()
-    # cap = cv2.VideoCapture('test2.mp4')
-    # cap = cv2.VideoCapture('/Users/hanyingqiao/Desktop/lost-and-found/dusk-till-down/video.mp4')
-    # cap = cv2.VideoCapture('/Users/hanyingqiao/Desktop/lost-and-found-demonstration/data1-onlylost.mp4')
-    cap = cv2.VideoCapture('/Users/hanyingqiao/Desktop/IMG_6757.mp4')
+    cap = cv2.VideoCapture('test2.mp4')
+    # cap = cv2.VideoCapture('/Users/hanyingqiao/Desktop/IMG_6757.mp4')
     fps = int(cap.get(5))
     print('fps:', fps)
-    # t = int(1000/fps)
-    t = fps
+    t = int(1000/fps)
     videoWriter = None
 
     while True:
