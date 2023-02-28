@@ -98,3 +98,16 @@ class DeepSort(object):
         else:
             features = np.array([])
         return features
+
+    def _get_ID_features(self, bbox_xyxy, ori_img):
+        im_crops = []
+        for i in range(len(bbox_xyxy)):
+            x1, y1, x2, y2 = bbox_xyxy[i]  # 把bbox坐标转成左上右下表示
+            img = ori_img[i]
+            im = img[y1:y2, x1:x2]  # 在原图中截取对应的目标框
+            im_crops.append(im)  # 用一个列表存储一帧里面所有目标框
+        if im_crops:
+            features = self.extractor(im_crops)  # 对每一个框进行特征提取
+        else:
+            features = np.array([])
+        return features

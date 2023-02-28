@@ -9,6 +9,7 @@ class baseDet(object):
         self.img_size = 640
         self.threshold = 0.3
         self.stride = 1
+        self.targetTrackId=None
 
     def build_config(self):
 
@@ -24,7 +25,7 @@ class baseDet(object):
 
         self.font = cv2.FONT_HERSHEY_SIMPLEX
 
-    def feedCap(self, im):
+    def feedCap(self, im, draw=True):
 
         retDict = {
             'frame': None,
@@ -33,16 +34,20 @@ class baseDet(object):
             'face_bboxes': []
         }
         self.frameCounter += 1
+        if draw:
+            print("drawing")
+            im, faces, face_bboxes = update_tracker(self, im, draw, self.targetTrackId)
+            # print("face_bboxes",face_bboxes)
+            # print("im",im)
 
-        im, faces, face_bboxes = update_tracker(self, im)
-        # print("face_bboxes",face_bboxes)
-        # print("im",im)
+            retDict['frame'] = im
+            retDict['faces'] = faces
+            retDict['face_bboxes'] = face_bboxes
 
-        retDict['frame'] = im
-        retDict['faces'] = faces
-        retDict['face_bboxes'] = face_bboxes
-
-        return retDict
+            return retDict
+        else:
+            bboxes=update_tracker(self, im, draw)
+            return bboxes
 
     def init_model(self):
         raise EOFError("Undefined model type.")

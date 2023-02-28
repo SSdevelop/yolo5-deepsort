@@ -15,7 +15,7 @@ def _pdist(a, b):
     Returns
     -------
     ndarray
-        Returns a matrix of size len(a), len(b) such that eleement (i, j)
+        Returns a matrix of size len(a), len(b) such that element (i, j)
         contains the squared distance between `a[i]` and `b[j]`.
 
     """
@@ -48,6 +48,9 @@ def _cosine_distance(a, b, data_is_normalized=False):
         contains the squared distance between `a[i]` and `b[j]`.
 
     """
+    import pytest
+    # print("cosine")
+    # pytest.set_trace()
     if not data_is_normalized:
         a = np.asarray(a) / np.linalg.norm(a, axis=1, keepdims=True)
         b = np.asarray(b) / np.linalg.norm(b, axis=1, keepdims=True)
@@ -130,6 +133,8 @@ class NearestNeighborDistanceMetric(object):
         else:
             raise ValueError(
                 "Invalid metric; must be either 'euclidean' or 'cosine'")
+        # self._metric = _nn_euclidean_distance
+        
         self.matching_threshold = matching_threshold
         self.budget = budget
         self.samples = {}
@@ -172,6 +177,10 @@ class NearestNeighborDistanceMetric(object):
 
         """
         cost_matrix = np.zeros((len(targets), len(features)))
+        import pytest
+        # print('before cosine')
         for i, target in enumerate(targets):
+            # cos
             cost_matrix[i, :] = self._metric(self.samples[target], features)
+        # pytest.set_trace()
         return cost_matrix

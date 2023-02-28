@@ -52,4 +52,47 @@ if __name__ == '__main__':
     extr = Extractor("checkpoint/ckpt.t7")
     feature = extr(img)
     print(feature.shape)
+    known_embedding = []
+    with open('./known_embedding.txt', 'r', encoding='utf-8') as f:
+        data = f.readlines()
+        for line in data:
+            # 将字符串以空格和'\r\n'分割，然后转换为int类型的数组赋值给elem
+            elem = list(map(int, line.split()))
+            known_embedding.append(elem)
+    f.close()
+
+
+    def list_txt(path, list=None):
+        if list != None:
+            file = open(path, 'w')
+            file.write(str(list))
+            file.close()
+            return None
+        else:
+            file = open(path, 'r')
+            rdlist = eval(file.read())
+            file.close()
+            return rdlist
+
+
+    def _nn_euclidean_distance(a, b):
+        a, b = np.asarray(a), np.asarray(b)
+        if len(a) == 0 or len(b) == 0:
+            return np.zeros((len(a), len(b)))
+        a2, b2 = np.square(a).sum(axis=1), np.square(b).sum(axis=1)
+        r2 = -2. * np.dot(a, b.T) + a2[:, None] + b2[None, :]
+        r2 = np.clip(r2, 0., float(np.inf))
+        return np.maximum(0.0, r2.min(axis=0))
+
+
+    def distance(features, targets):
+        cost_matrix = np.zeros((len(targets), len(features)))
+        for i, target in enumerate(targets):
+            cost_matrix[i, :] = _nn_euclidean_distance(target, features)
+        return cost_matrix
+
+
+    name_list = list_txt(path='name_list.txt')
+    cost_matrix = distance(known_embedding, feature)
+    print('cost_matrix')
 

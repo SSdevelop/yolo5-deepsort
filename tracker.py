@@ -2,6 +2,7 @@ from deep_sort.utils.parser import get_config
 from deep_sort.deep_sort import DeepSort
 import torch
 import cv2
+import math
 
 palette = (2**11 - 1, 2**15 - 1, 2**20 - 1)
 cfg = get_config()
@@ -56,7 +57,8 @@ def plot_bboxes(
     image,
     bboxes,
     line_thickness=None,
-    target_detector=None
+    target_detector=None,
+    track_id=None
 ):
 
     tl = (
@@ -72,9 +74,12 @@ def plot_bboxes(
             return image
         (xp, yp) = person
         (xs, ys) = suitcase
-        distance = 95
-        # distance be adjusted acd to model
-        if abs(xp - xs) > distance or abs(yp - ys) > distance:
+        distance = 220
+        # distance be adjusted acd to video parameters
+        x_sqr = abs(xp - xs) * abs(xp - xs)
+        y_sqr = abs(yp - ys) * abs(yp - ys)
+        print(f"distance {math.sqrt(x_sqr + y_sqr)}")
+        if x_sqr + y_sqr >= distance * distance:
             target_detector.personAndSuitcaseLostCounter += 1
         else:
             target_detector.personAndSuitcaseLostCounter = 0
@@ -103,6 +108,7 @@ def plot_bboxes(
         if lost is True:
             import pytest
             target_detector.isLost=True
+            # 在这里保存图片 并退出?
             # pytest.set_trace()
         return image
 
@@ -110,9 +116,17 @@ def plot_bboxes(
     # 1 person and 1 suit case,
     # mark suite case as lost when distance is larger than 0.5m.
 
-    def render_person(image, bbox):
+    def render_person(image, bbox, target=False):
         (x1, y1, x2, y2, cls_id, pos_id) = bbox
-        color = (0, 255, 0)
+        if target:
+            color = (0, 255, 0)
+        else:
+            color = (220,220,220)
+        text = "{}-{}".format(cls_id, pos_id)
+        if target:
+            text = text + "TARGET"
+        import pytest
+        # pytest.set_trace()
         c1, c2 = (x1, y1), (x2, y2)
         import pytest
         # pytest.set_trace()
@@ -123,7 +137,7 @@ def plot_bboxes(
         cv2.rectangle(image, c1, c2, color, -1, cv2.LINE_AA)  # filled
         cv2.putText(
             image,
-            "{}".format(cls_id),
+            text,
             (c1[0], c1[1] - 2),
             0,
             tl / 3,
@@ -148,7 +162,7 @@ def plot_bboxes(
         cv2.rectangle(image, c1, c2, color, -1, cv2.LINE_AA)  # filled
         cv2.putText(
             image,
-            "{}".format(cls_id),
+            "{}-{}".format(cls_id,pos_id),
             (c1[0], c1[1] - 2),
             0,
             tl / 3,
@@ -167,62 +181,71 @@ def plot_bboxes(
     for bbox in bboxes:
         # cls_id can be only person or suitcase
         (x1, y1, x2, y2, cls_id, pos_id) = bbox
-        if cls_id == "person":
-            image, person_gravity_center = render_person(image, bbox)
-        else:
+        if cls_id == "person" and pos_id == track_id:
+            image, person_gravity_center = render_person(image, bbox, target=True)
+        elif cls_id == "person" and pos_id != track_id:
+            image, _ = render_person(image, bbox, target=False)
+        elif cls_id == "suitcase":
+            print("suitcase found suitcase found ")
             image, suitcase_gravity_center = render_suitcase(image, bbox)
 
     image = check_lost(image, person_gravity_center, suitcase_gravity_center, target_detector)
-        # facenet: Please add facenet id to this text label.
+    # facenet: Please add facenet id to this text label.
 
     return image
 
 
-def update_tracker(target_detector, image):
-    new_faces = []
-    _, bboxes = target_detector.detect(image)
-    # / print("detect result", bboxes)
-    bbox_xywh = []
-    confs = []
-    clss = []
+def update_tracker(target_detector, image, draw=True, target_track_id=None):
+    if draw:
+        new_faces = []
+        _, bboxes = target_detector.detect(image)
+        # / print("detect result", bboxes)
+        bbox_xywh = []
+        confs = []
+        clss = []
 
-    for x1, y1, x2, y2, cls_id, conf in bboxes:
-        obj = [int((x1 + x2) / 2), int((y1 + y2) / 2), x2 - x1, y2 - y1]
-        bbox_xywh.append(obj)
-        confs.append(conf)
-        clss.append(cls_id)
+        for x1, y1, x2, y2, cls_id, conf in bboxes:
+            obj = [int((x1 + x2) / 2), int((y1 + y2) / 2), x2 - x1, y2 - y1]
+            bbox_xywh.append(obj)
+            confs.append(conf)
+            clss.append(cls_id)
 
-    xywhs = torch.Tensor(bbox_xywh)
-    confss = torch.Tensor(confs)
+        xywhs = torch.Tensor(bbox_xywh)
+        confss = torch.Tensor(confs)
 
-    outputs = deepsort.update(xywhs, confss, clss, image)
-    # / print("outputs:", outputs)
-    bboxes2draw = []
-    face_bboxes = []
-    current_ids = []
-    for value in list(outputs):
-        x1, y1, x2, y2, cls_, track_id = value
-        bboxes2draw.append((x1, y1, x2, y2, cls_, track_id))
-        current_ids.append(track_id)
-        if cls_ == "face":
-            if not track_id in target_detector.faceTracker:
-                target_detector.faceTracker[track_id] = 0
-                face = image[y1:y2, x1:x2]
-                new_faces.append((face, track_id))
-            face_bboxes.append((x1, y1, x2, y2))
+        outputs = deepsort.update(xywhs, confss, clss, image)
+        import pytest
+        # pytest.set_trace()
+        # / print("outputs:", outputs)
+        bboxes2draw = []
+        face_bboxes = []
+        current_ids = []
+        for value in list(outputs):
+            x1, y1, x2, y2, cls_, track_id = value
+            bboxes2draw.append((x1, y1, x2, y2, cls_, track_id))
+            current_ids.append(track_id)
+            if cls_ == "face":
+                if not track_id in target_detector.faceTracker:
+                    target_detector.faceTracker[track_id] = 0
+                    face = image[y1:y2, x1:x2]
+                    new_faces.append((face, track_id))
+                face_bboxes.append((x1, y1, x2, y2))
 
-    ids2delete = []
-    for history_id in target_detector.faceTracker:
-        if not history_id in current_ids:
-            target_detector.faceTracker[history_id] -= 1
-        if target_detector.faceTracker[history_id] < -5:
-            ids2delete.append(history_id)
-    for ids in ids2delete:
-        target_detector.faceTracker.pop(ids)
-        print("-[INFO] Delete track id:", ids)
+        ids2delete = []
+        for history_id in target_detector.faceTracker:
+            if not history_id in current_ids:
+                target_detector.faceTracker[history_id] -= 1
+            if target_detector.faceTracker[history_id] < -5:
+                ids2delete.append(history_id)
+        for ids in ids2delete:
+            target_detector.faceTracker.pop(ids)
+            print("-[INFO] Delete track id:", ids)
 
-    image = plot_bboxes(
-        image, bboxes2draw, line_thickness=None, target_detector=target_detector
-    )
+        image = plot_bboxes(
+            image, bboxes2draw, line_thickness=None, target_detector=target_detector, track_id=target_track_id
+        )
 
-    return image, new_faces, face_bboxes
+        return image, new_faces, face_bboxes
+    else:
+        # _, bboxes = target_detector.detect(image)
+        pass
