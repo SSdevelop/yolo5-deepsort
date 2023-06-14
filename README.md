@@ -1,3 +1,14 @@
+## Starting the OpenCV Demo: 
+Run the following in `yolov5-deepsort`:`python3 web-ui/backend.py`
+
+When the target person is located, its bounding box turn green:
+![target.png](examples%2Ftarget.png)
+At the moment when the person losts his or her belonging, "Lost" will
+pop up on the bounding box of the suitcase (Currently only suitcase is supported).
+![lost.PNG](examples%2Flost.PNG)The suitcase is "lost" when pixel distance between 
+the center of the person and the suitcase exceed a threshold. However, this might not be the
+perfect criteria and we might need some better distance estimation algorithms.
+
 ## video capture
 \demo.py\main
 
