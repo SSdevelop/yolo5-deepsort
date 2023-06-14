@@ -36,7 +36,6 @@ class baseDet(object):
         }
         self.frameCounter += 1
         if draw:
-            print("drawing")
             im, faces, face_bboxes, current_ids,lost = update_tracker(self, im, draw, self.targetTrackId)
             # print("face_bboxes",face_bboxes)
             # print("im",im)
