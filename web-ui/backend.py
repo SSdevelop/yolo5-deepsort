@@ -78,7 +78,8 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,visualize=False)
 
 if __name__ == '__main__':
     det = Detector(['person', 'suitcase'])
-    vid_names=['web-ui/IMG_6757.mp4']
+    #you can change vid names and img names yourself (relative path from project base dir)
+    vid_names=['IMG_6757.mp4']
     img_names=['images/origin/6757.PNG']
     cv2_img=[cv2.imread(name) for name in img_names]
     cv2_cap=[cv2.VideoCapture(name) for name in vid_names]
