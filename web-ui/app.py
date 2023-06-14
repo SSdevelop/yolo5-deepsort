@@ -96,7 +96,6 @@ def exec_back_end(n_clicks, img_names, img_contents, vid_names, vid_contents):
     if vid_names is None:
         return "Please upload video footages"
     for index,vid_name in enumerate(vid_names):
-
         cap=str_to_video(vid_contents[index])
         logging.info(f"VID name: {vid_name} Content {vid_contents[index][:100]}")
         result_list.append(exec_one_video(cap,det,known_embedding))

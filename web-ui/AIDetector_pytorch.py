@@ -19,13 +19,7 @@ cfg.merge_from_file("deep_sort/configs/deep_sort.yaml")
 import glob
 import tqdm
 import cv2
-def log_running(func):
-    def inner(*args, **kwargs):
-        logging.info(f"Entering {func.__name__}")
-        result=func(*args, **kwargs)
-        logging.info(f"Exiting {func.__name__}")
-        return result
-    return inner
+
 
 deepsort = DeepSort(
     cfg.DEEPSORT.REID_CKPT,
@@ -51,7 +45,7 @@ class Detector(baseDet):
         self.build_config()
         self.item_to_detect = item_to_detect
         
-    @log_running
+
     #TODO model should be singleton and only created once
     def init_model(self):
         global model
@@ -70,7 +64,7 @@ class Detector(baseDet):
         logging.info("Model loaded")
         self.names = model.module.names if hasattr(
             model, 'module') else model.names
-    @log_running
+
     def preprocess(self, img):
         img0 = img.copy()
         img = letterbox(img, new_shape=self.img_size)[0]
@@ -85,7 +79,7 @@ class Detector(baseDet):
         return img0, img
 
 #  检测乘客全身照的函数，其实是自带的原函数
-    @log_running
+
     def detect_oringin(self, im):
         logging.info(f"Raw image : {im}")
 
@@ -112,7 +106,7 @@ class Detector(baseDet):
                         (x1, y1, x2, y2, lbl, conf))
         return im, pred_boxes
 #  原本是自带的原函数，进行更改过后只会检测视频中置信度>0.8的人，降低运算成本
-    @log_running
+
     def detect(self, im):
 
         im0, img = self.preprocess(im)
@@ -140,7 +134,6 @@ class Detector(baseDet):
         logging.info(pred_boxes)
         return im, pred_boxes
 
-    @log_running
     def loadIDFeats(self,img_name,img_content):
         '''
         加载目标人的特征
@@ -153,7 +146,7 @@ class Detector(baseDet):
         for index,person in enumerate(img_name):
             logging.info(f"Person: {person}")
             picture = img_content[index]
-            im, pred_boxes = self.detect_oringin(picture)
+            im, pred_boxes = self.detect(picture)
             # 这里要用原始的检测函数，目的是确保每一张全身照的特征都被提取
             if im is None:
                 logging.info('No person detected in {}. Skipped'.format(person))
@@ -175,7 +168,7 @@ class Detector(baseDet):
         logging.info(f"known box {known_boxes_input}")
         known_embedding = deepsort._get_ID_features(known_boxes_input, known_img_input)  # 此函数需要xywh的格式
         return img_name, known_embedding
-    @log_running
+
     def loadDetFeats(self, picture):
         '''
         加载目标人的特征

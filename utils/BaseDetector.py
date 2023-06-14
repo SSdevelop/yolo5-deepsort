@@ -31,20 +31,21 @@ class baseDet(object):
             'frame': None,
             'faces': None,
             'list_of_ids': None,
-            'face_bboxes': []
+            'face_bboxes': [],
+            'current_ids': None
         }
         self.frameCounter += 1
         if draw:
             print("drawing")
-            im, faces, face_bboxes = update_tracker(self, im, draw, self.targetTrackId)
+            im, faces, face_bboxes, current_ids,lost = update_tracker(self, im, draw, self.targetTrackId)
             # print("face_bboxes",face_bboxes)
             # print("im",im)
 
             retDict['frame'] = im
             retDict['faces'] = faces
             retDict['face_bboxes'] = face_bboxes
-
-            return retDict
+            retDict['current_ids']=current_ids
+            return retDict,lost
         else:
             bboxes=update_tracker(self, im, draw)
             return bboxes
