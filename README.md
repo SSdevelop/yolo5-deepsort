@@ -1,6 +1,7 @@
-## Starting the OpenCV Demo: 
-Run the following in `yolov5-deepsort`:`python3 web-ui/backend.py`
-
+## Starting the Flask Backend: 
+Run the following in `yolov5-deepsort`:`python web-ui/app.py`
+Alternatively, you can also start a local opencv demo (make sure the paths to images and videos are correct):
+`python web-ui/backend.py`
 When the target person is located, its bounding box turn green:
 ![target.png](examples%2Ftarget.png)
 At the moment when the person losts his or her belonging, "Lost" will

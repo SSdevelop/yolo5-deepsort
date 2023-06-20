@@ -5,7 +5,6 @@ import uuid
 from PIL import Image
 import base64
 import dash
-import dash_bootstrap_components as dbc
 from dash import dcc
 from dash import html
 import cv2
@@ -17,14 +16,14 @@ from dash.dependencies import Input, Output, State
 import logging
 from AIDetector_pytorch import Detector
 from demo import _pdist
-from progress_monitor import job_monitor
+
 
 def _nn_euclidean_distance(x, y, single_embedding):
     distances = _pdist(x, y, single_embedding)
     return np.maximum(0.0, distances.min(axis=0))
 logging_level = logging.INFO
 logging.basicConfig(level=logging_level,format='[%(lineno)d]:[%(asctime)s]:%(message)s')
-app = dash.Dash(__name__,external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__)
 #TODO: use dash-bootstrap to format
 app.layout = html.Div([
     dcc.Upload(
@@ -43,24 +42,11 @@ app.layout = html.Div([
         ]),html.Div(id='vid-list')],
         multiple=True
     ),
+
     html.Button('Submit', id='submit-button',n_clicks=0),
-    dbc.Progress(id='prog',value=0, style={"height": "30px"}, className="mb-3"),
-    dcc.Interval(id='interval',interval=500),
     html.Div(id='exec-result')
 ])
 
-@app.callback(
-    Output('prog','value'),
-    Input('interval', 'n_intervals'),
-)
-def poll(s):
-    return job_monitor.get_progress()
-
-
-# @app.callback(Output('img-list', 'children'),
-#               Input('cancel-button', 'filename'))
-# def cancel(s):
-#     pass
 
 
 
@@ -98,36 +84,16 @@ def str_to_video(vid_content:str):
     #os.remove(file_name)
     return vid_cap,file_name
 
-
-#use dcc Store to triger
-@app.callback(
-    Output('submit-button','disable'),
-    Input('submit-button', 'n_clicks'),
-)
-def submit_trigger(n_clicks):
-    if n_clicks==0:
-        return 'first',False
-    return 'run', True
-
-
-
-
-
 #https://stackoverflow.com/questions/74919882/read-video-from-base64-in-python
-#TODO: add excution monitor to allow canceling and process bar
-#For simplicity, only one process is allowed to enter this
-@app.callback(
-                Output('exec-result', 'children'),
+@app.callback(Output('exec-result', 'children'),
+              Input('submit-button', 'n_clicks'),
               State('upload-img', 'filename'),
               State('upload-img', 'contents'),
               State('upload-vid', 'filename'),
               State('upload-vid', 'contents'))
-def exec_back_end(start_flag, img_names, img_contents, vid_names, vid_contents):
-    default_message="Please upload images and videos"
-    if start_flag=='first':
-        return default_message
+def exec_back_end(n_clicks, img_names, img_contents, vid_names, vid_contents):
     #print(f'vids:{vid_names} imgs:{img_names}')
-    logging.info(f"exec back end: {start_flag}")
+    logging.info(f"exec back end: {n_clicks}")
     det = Detector(['person', 'suitcase'])
     #TODO: refactor loadIDFeats to take imgs as faces
     if img_contents is None:
@@ -140,16 +106,12 @@ def exec_back_end(start_flag, img_names, img_contents, vid_names, vid_contents):
     for index,vid_name in enumerate(vid_names):
         cap,tmp_name=str_to_video(vid_contents[index])
         logging.info(f"VID name: {vid_name} Content {vid_contents[index][:100]}")
-        #set visualization=True in exec_one_video to visualize
-        exec_result=exec_one_video(cap,det,known_embedding)
-        result_list.append(exec_result)
+        result_list.append(exec_one_video(cap,det,known_embedding,True))
         cap.release()
         logging.info(f"Deleting temp file {tmp_name}")
         os.remove(tmp_name)
     logging.info(f"Result List: {result_list}")
-    return str(result_list), "stop"
-
-
+    return str(result_list)
 
 #https://stackoverflow.com/questions/73167161/error-when-trying-to-capture-some-frames-from-a-video-using-open-cv-on-windows
 
