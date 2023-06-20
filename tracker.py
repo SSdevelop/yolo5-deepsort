@@ -1,3 +1,5 @@
+import logging
+
 from deep_sort.utils.parser import get_config
 from deep_sort.deep_sort import DeepSort
 import torch
@@ -66,26 +68,29 @@ def plot_bboxes(
     )  # line/font thickness
 
     def check_lost(image, person, suitcase, target_detector):
+        logging.info(f"Current loss count: {target_detector.personAndSuitcaseLostCounter}")
+        #TODO: This is the cause of low accuracy. should use distance estimation algorithms
+
         # definition_of_lost = either vertical or horizontal distance between the detected person and suitcase > a constant
         # image has person, suitcase, and 
         # target_detector.personAndSuitcaseLostCounter > 30
         if person is None or suitcase is None:
             target_detector.personAndSuitcaseLostCounter = 0
-            return image
+            return image, False
         (xp, yp) = person
         (xs, ys) = suitcase
-        distance = 220
+        distance = 110
         # distance be adjusted acd to video parameters
         x_sqr = abs(xp - xs) * abs(xp - xs)
         y_sqr = abs(yp - ys) * abs(yp - ys)
-        print(f"distance {math.sqrt(x_sqr + y_sqr)}")
+        logging.info(f"distance {math.sqrt(x_sqr + y_sqr)}")
         if x_sqr + y_sqr >= distance * distance:
             target_detector.personAndSuitcaseLostCounter += 1
         else:
             target_detector.personAndSuitcaseLostCounter = 0
         lost = False
         if target_detector.personAndSuitcaseLostCounter > 20:
-            print('LOST!!!') 
+            logging.info('LOST!!!')
             lost = True
             color= (0, 0, 255)
             x_lost_1 = int(xs - 20)
@@ -110,7 +115,7 @@ def plot_bboxes(
             target_detector.isLost=True
             # 在这里保存图片 并退出?
             # pytest.set_trace()
-        return image
+        return image,lost
 
     # without face recognition, can only handle scenarios where there is only
     # 1 person and 1 suit case,
@@ -178,6 +183,7 @@ def plot_bboxes(
     suitcase_gravity_center = None
     import pytest
     # pytest.set_trace()
+    logging.info(f"Current tracking {track_id}")
     for bbox in bboxes:
         # cls_id can be only person or suitcase
         (x1, y1, x2, y2, cls_id, pos_id) = bbox
@@ -186,20 +192,20 @@ def plot_bboxes(
         elif cls_id == "person" and pos_id != track_id:
             image, _ = render_person(image, bbox, target=False)
         elif cls_id == "suitcase":
-            print("suitcase found suitcase found ")
+            logging.info("suitcase found ")
             image, suitcase_gravity_center = render_suitcase(image, bbox)
 
-    image = check_lost(image, person_gravity_center, suitcase_gravity_center, target_detector)
+    image,lost = check_lost(image, person_gravity_center, suitcase_gravity_center, target_detector)
     # facenet: Please add facenet id to this text label.
 
-    return image
+    return image,lost
 
 
 def update_tracker(target_detector, image, draw=True, target_track_id=None):
     if draw:
         new_faces = []
         _, bboxes = target_detector.detect(image)
-        # / print("detect result", bboxes)
+        # / logging.info("detect result", bboxes)
         bbox_xywh = []
         confs = []
         clss = []
@@ -214,9 +220,10 @@ def update_tracker(target_detector, image, draw=True, target_track_id=None):
         confss = torch.Tensor(confs)
 
         outputs = deepsort.update(xywhs, confss, clss, image)
+        logging.info(f"deepsort update: {outputs}")
         import pytest
         # pytest.set_trace()
-        # / print("outputs:", outputs)
+        # / logging.info("outputs:", outputs)
         bboxes2draw = []
         face_bboxes = []
         current_ids = []
@@ -239,13 +246,13 @@ def update_tracker(target_detector, image, draw=True, target_track_id=None):
                 ids2delete.append(history_id)
         for ids in ids2delete:
             target_detector.faceTracker.pop(ids)
-            print("-[INFO] Delete track id:", ids)
+            logging.info("Delete track id:", ids)
 
-        image = plot_bboxes(
+        image,lost = plot_bboxes(
             image, bboxes2draw, line_thickness=None, target_detector=target_detector, track_id=target_track_id
         )
 
-        return image, new_faces, face_bboxes
+        return image, new_faces, face_bboxes,current_ids,lost
     else:
         # _, bboxes = target_detector.detect(image)
         pass
