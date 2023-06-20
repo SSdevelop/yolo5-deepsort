@@ -1,5 +1,5 @@
 import logging
-
+from progress_monitor import job_monitor
 import cv2
 import imutils
 import numpy as np
@@ -10,6 +10,8 @@ logging_level = logging.INFO
 logging.basicConfig(level=logging_level,format='[%(lineno)d]:[%(asctime)s]:%(message)s')
 
 def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,visualize=False):
+    job_monitor.start_process()
+    job_monitor.set_frame(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
     fps = int(cap.get(5))
     logging.info(f'fps: {fps}')
     frame_count = 0
@@ -21,8 +23,11 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,visualize=False)
     trackId = None
     lost_frame_index = []
     while True:
+        if job_monitor.canceled():
+            return lost_frame_index
         success, im = cap.read()
         frame_count = frame_count + 1
+        job_monitor.increase()
         if im is None:
             logging.info(f"Read {frame_count} frames")
             break
@@ -62,17 +67,17 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,visualize=False)
         #     videoWriter = cv2.VideoWriter(
         #         'result.mp4', fourcc, fps, (result.shape[1], result.shape[0]))
         # videoWriter.write(result)
-        frame_count += 1
         if visualize:
             #we display a video using opencv with imshow and set waitket w.r.t fps
             cv2.imshow('video',result)
             cv2.waitKey(int(100/fps))
 
-    cap.release()
+
     #videoWriter.release()
     if visualize:
         cv2.destroyAllWindows()
     logging.info(f"Lost frames: {lost_frame_index}")
+    job_monitor.end_process()
     return lost_frame_index
 
 
