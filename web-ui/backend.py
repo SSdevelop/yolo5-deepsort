@@ -1,4 +1,6 @@
 import logging
+import os.path
+
 from progress_monitor import job_monitor
 import cv2
 import imutils
@@ -9,7 +11,9 @@ from demo import _nn_euclidean_distance
 logging_level = logging.INFO
 logging.basicConfig(level=logging_level,format='[%(lineno)d]:[%(asctime)s]:%(message)s')
 
-def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,visualize=False):
+
+#https://stackoverflow.com/questions/30103077/what-is-the-codec-for-mp4-videos-in-python-opencv
+def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,vid_name=None,visualize=False):
     job_monitor.start_process()
     job_monitor.set_frame(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
     fps = int(cap.get(5))
@@ -19,9 +23,14 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,visualize=False)
     trackingcounter = 0
     targetLocked = False
     minIndex = None
-    videoWriter = None
     trackId = None
     lost_frame_index = []
+    if vid_name is not None:
+        #codec must be avc1 (h.264) to allowing playing in <video> element of html
+        fourcc = cv2.VideoWriter_fourcc(*'avc1')
+        name,suffix=vid_name.split('.')
+        video_writer=cv2.VideoWriter(os.path.join('web-ui/video-result',name+'_result.'+suffix),fourcc,6,(int(cap.get(3)),int(cap.get(4))))
+    lost_counter=20
     while True:
         if job_monitor.canceled():
             return lost_frame_index
@@ -60,20 +69,18 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,visualize=False)
             targetLocked = True
         #save result
         result = result['frame']
+
+        if lost_counter>0 and lost and vid_name is not None:
+            logging.info(f'Writing frame {lost_counter} to output')
+            video_writer.write(result)
+            lost_counter-=1
         result = imutils.resize(result, height=500)
-        # if videoWriter is None:
-        #     fourcc = cv2.VideoWriter_fourcc(
-        #         'm', 'p', '4', 'v')  # opencv3.0
-        #     videoWriter = cv2.VideoWriter(
-        #         'result.mp4', fourcc, fps, (result.shape[1], result.shape[0]))
-        # videoWriter.write(result)
         if visualize:
             #we display a video using opencv with imshow and set waitket w.r.t fps
             cv2.imshow('video',result)
             cv2.waitKey(int(100/fps))
-
-
-    #videoWriter.release()
+    if vid_name is not None:
+        video_writer.release()
     if visualize:
         cv2.destroyAllWindows()
     logging.info(f"Lost frames: {lost_frame_index}")
@@ -84,12 +91,12 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,visualize=False)
 if __name__ == '__main__':
     det = Detector(['person', 'suitcase'])
     #you can change vid names and img names yourself (relative path from project base dir)
-    vid_names=['IMG_6757.mp4']
-    img_names=['images/origin/6757.PNG']
+    vid_names=['IMG_1752.mp4']
+    img_names=['images/origin/1752.PNG']
     cv2_img=[cv2.imread(name) for name in img_names]
     cv2_cap=[cv2.VideoCapture(name) for name in vid_names]
     name_list, known_embedding = det.loadIDFeats(img_names, cv2_img)
     result_list = []
     logging.info(f"know embedding: {known_embedding}")
     for index, vid_name in enumerate(vid_names):
-        result_list.append(exec_one_video(cv2_cap[index], det, known_embedding,True))
+        result_list.append(exec_one_video(cv2_cap[index], det, known_embedding,vid_name,True))

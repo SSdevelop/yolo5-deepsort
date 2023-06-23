@@ -76,6 +76,7 @@ class Detector(baseDet):
         img /= 255.0
         if img.ndimension() == 3:
             img = img.unsqueeze(0)
+        logging.info(f"Input image size: {img.shape}")
         return img0, img
 
 #  检测乘客全身照的函数，其实是自带的原函数

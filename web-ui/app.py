@@ -2,7 +2,7 @@ import logging
 import os.path
 
 import cv2
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,send_file
 from backend import exec_one_video
 from AIDetector_pytorch import Detector
 from progress_monitor import job_monitor
@@ -21,6 +21,15 @@ def after_request(response):
 logging_level = logging.DEBUG
 logging.basicConfig(level=logging_level,format='[%(lineno)d]:[%(asctime)s]:%(message)s')
 #https://www.javatpoint.com/flask-file-uploading#:~:text=The%20server%2Dside%20flask%20script,saved%20to%20some%20desired%20location.
+
+
+#https://stackoverflow.com/questions/57233053/chrome-fails-to-load-video-if-transferred-with-status-206-partial-content
+@blueprint.route('/results/<filename>',methods=['GET'])
+def get_file(filename):
+    response=send_file(os.path.join('video-result',filename), mimetype='video/mp4')
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
+
 @blueprint.route("/", methods=['GET'])
 def index():
     return "<p>POST request to /upload for inference; GET /progress for inference progress.</p>"
@@ -41,6 +50,7 @@ def inference():
         images=[]
         video_cv2=[]
         videos=[]
+        return_metadata=[]
         file_list=request.files
         for i in range(num_images):
             image=file_list['image{}'.format(i)]
@@ -57,10 +67,11 @@ def inference():
         det = Detector(['person', 'suitcase'])
         # you can change vid names and img names yourself (relative path from project base dir)
         name_list, known_embedding = det.loadIDFeats(images, images_cv2)
-        result_list = []
         logging.info(f"know embedding: {known_embedding}")
         for index, vid_name in enumerate(videos):
-            result_list.append(exec_one_video(video_cv2[index], det, known_embedding, True))
+            frame_range=exec_one_video(video_cv2[index], det, known_embedding,vid_name,True)
+            name, suffix = vid_name.split('.')
+            return_metadata.append([name+'_result.'+suffix,frame_range])
             video_cv2[index].release()
         # clean up
         for i in range(num_videos):
@@ -69,7 +80,7 @@ def inference():
         for i in range(num_images):
             image = file_list['image{}'.format(i)]
             os.remove(os.path.join(tmp_dir, image.filename))
-        return jsonify(result_list)
+        return jsonify(return_metadata)
     return "Only support POST Method"
 
 @blueprint.route("/progress", methods=['GET'])
@@ -79,5 +90,7 @@ def progress():
 
 app=Flask(__name__)
 app.register_blueprint(blueprint)
+
+
 if __name__ == '__main__':
     app.run()
