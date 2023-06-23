@@ -72,7 +72,7 @@ def inference():
         for index, vid_name in enumerate(videos):
             frame_range=exec_one_video(video_cv2[index], det, known_embedding,vid_name,True)
             name, suffix = vid_name.split('.')
-            return_metadata.append([name+'_result.'+suffix,frame_range])
+            return_metadata.append(["__RESULT__"+name+'.'+suffix,frame_range])
             video_cv2[index].release()
         # clean up
         for i in range(num_videos):
