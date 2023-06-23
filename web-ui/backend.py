@@ -5,7 +5,8 @@ from progress_monitor import job_monitor
 import cv2
 import imutils
 import numpy as np
-
+video_result='web-ui/video-result'
+os.makedirs(video_result,exist_ok=True)
 from AIDetector_pytorch import Detector
 from demo import _nn_euclidean_distance
 logging_level = logging.INFO
@@ -29,7 +30,7 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,vid_name=None,vi
         #codec must be avc1 (h.264) to allowing playing in <video> element of html
         fourcc = cv2.VideoWriter_fourcc(*'avc1')
         name,suffix=vid_name.split('.')
-        video_writer=cv2.VideoWriter(os.path.join('web-ui/video-result',name+'_result.'+suffix),fourcc,6,(int(cap.get(3)),int(cap.get(4))))
+        video_writer=cv2.VideoWriter(os.path.join(video_result,name+'_result.'+suffix),fourcc,6,(int(cap.get(3)),int(cap.get(4))))
     lost_counter=20
     while True:
         if job_monitor.canceled():

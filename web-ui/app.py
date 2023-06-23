@@ -8,8 +8,9 @@ from AIDetector_pytorch import Detector
 from progress_monitor import job_monitor
 from flask import Blueprint
 blueprint = Blueprint('blueprint', __name__)
-
 tmp_dir='web-ui/tmp-store'
+os.makedirs(tmp_dir,exist_ok=True)
+
 @blueprint.after_request
 def after_request(response):
     header = response.headers
