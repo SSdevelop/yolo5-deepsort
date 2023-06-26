@@ -1,3 +1,4 @@
+import json
 import logging
 import os.path
 
@@ -43,6 +44,8 @@ def inference():
         #files = request.files.getlist('file')
         # Iterate for each file in the files List, and Save them
         num_images,num_videos=int(request.form['num_images']),int(request.form['num_videos'])
+        file_names=json.loads(request.form['file_names'])
+        job_monitor.start_process(file_names)
         if num_videos==0 or num_videos==0:
             return 'Please upload an image and a video!'
         logging.info(f"Images:{num_images} Videos {num_videos}")
@@ -50,6 +53,7 @@ def inference():
         images_cv2=[]
         images=[]
         video_cv2=[]
+        frame_count=[]
         videos=[]
         return_metadata=[]
         file_list=request.files
@@ -63,17 +67,20 @@ def inference():
             video = file_list['video{}'.format(i)]
             videos.append(video.filename)
             video.save(os.path.join(tmp_dir, video.filename))
-            video_cv2.append(cv2.VideoCapture(os.path.join(tmp_dir, video.filename)))
+            vid_cap=cv2.VideoCapture(os.path.join(tmp_dir, video.filename))
+            video_cv2.append(vid_cap)
+            frame_count.append(int(vid_cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+        job_monitor.set_frames(frame_count)
         logging.info(f'Videos: {videos}')
         det = Detector(['person', 'suitcase'])
         # you can change vid names and img names yourself (relative path from project base dir)
         name_list, known_embedding = det.loadIDFeats(images, images_cv2)
         logging.info(f"know embedding: {known_embedding}")
-        for index, vid_name in enumerate(videos):
-            frame_range=exec_one_video(video_cv2[index], det, known_embedding,vid_name,True)
+        for vid_index, vid_name in enumerate(videos):
+            frame_range=exec_one_video(video_cv2[vid_index], det,vid_index, known_embedding,vid_name,True)
             name, suffix = vid_name.split('.')
             return_metadata.append(["__RESULT__"+name+'.'+suffix,frame_range])
-            video_cv2[index].release()
+            video_cv2[vid_index].release()
         # clean up
         for i in range(num_videos):
             video = file_list['video{}'.format(i)]
@@ -81,13 +88,19 @@ def inference():
         for i in range(num_images):
             image = file_list['image{}'.format(i)]
             os.remove(os.path.join(tmp_dir, image.filename))
+        job_monitor.end_process()
         return jsonify(return_metadata)
     return "Only support POST Method"
 
-@blueprint.route("/progress", methods=['GET'])
+# @blueprint.route("/progress", methods=['POST'])
+# def progress():
+#     if request.method=='POST':
+#         logging.debug(f"Progress Queried: {job_monitor.get_progress()}/100")
+#         return jsonify({'progress':job_monitor.get_progress()})
+
+@blueprint.route('/progress', methods=['GET'])
 def progress():
-    logging.debug(f"Progress Queried: {job_monitor.get_progress()}/100")
-    return jsonify({'progress':job_monitor.get_progress()})
+    return jsonify(job_monitor.get_progress())
 
 app=Flask(__name__)
 app.register_blueprint(blueprint)

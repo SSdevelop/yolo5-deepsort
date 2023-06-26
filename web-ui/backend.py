@@ -14,9 +14,7 @@ logging.basicConfig(level=logging_level,format='[%(lineno)d]:[%(asctime)s]:%(mes
 
 
 #https://stackoverflow.com/questions/30103077/what-is-the-codec-for-mp4-videos-in-python-opencv
-def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,vid_name=None,visualize=False):
-    job_monitor.start_process()
-    job_monitor.set_frame(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+def exec_one_video(cap: cv2.VideoCapture, det: Detector,index:int, embeds,vid_name=None,visualize=False):
     fps = int(cap.get(5))
     logging.info(f'fps: {fps}')
     frame_count = 0
@@ -33,11 +31,11 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,vid_name=None,vi
         video_writer=cv2.VideoWriter(os.path.join(video_result,"__RESULT__"+name+'.'+suffix),fourcc,6,(int(cap.get(3)),int(cap.get(4))))
     lost_counter=20
     while True:
-        if job_monitor.canceled():
-            return lost_frame_index
+        # if job_monitor.canceled():
+        #     return lost_frame_index
         success, im = cap.read()
         frame_count = frame_count + 1
-        job_monitor.increase()
+        job_monitor.increase(index)
         if im is None:
             logging.info(f"Read {frame_count} frames")
             break
@@ -85,7 +83,6 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector, embeds,vid_name=None,vi
     if visualize:
         cv2.destroyAllWindows()
     logging.info(f"Lost frames: {lost_frame_index}")
-    job_monitor.end_process()
     return lost_frame_index
 
 
