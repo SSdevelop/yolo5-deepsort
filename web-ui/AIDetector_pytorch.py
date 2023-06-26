@@ -149,10 +149,9 @@ class Detector(baseDet):
             picture = img_content[index]
             im, pred_boxes = self.detect(picture)
             # 这里要用原始的检测函数，目的是确保每一张全身照的特征都被提取
-            if im is None:
+            if im is None or len(pred_boxes)==0:
                 logging.info('No person detected in {}. Skipped'.format(person))
                 continue
-
             x1 = pred_boxes[0][0]
             y1 = pred_boxes[0][1]
             x2 = pred_boxes[0][2]
@@ -167,6 +166,8 @@ class Detector(baseDet):
             known_img_input.append(picture)
             # 得到所有的embedding
         logging.info(f"known box {known_boxes_input}")
+        if len(known_img_input)==0:
+            return img_name,[]
         known_embedding = deepsort._get_ID_features(known_boxes_input, known_img_input)  # 此函数需要xywh的格式
         return img_name, known_embedding
 

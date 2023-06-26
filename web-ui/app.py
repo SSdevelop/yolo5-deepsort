@@ -1,3 +1,5 @@
+#Unlike regular web app, this backend is not safe when accesssed from multipe clients
+#Only one client should be communicating with the backend at any given time
 import json
 import logging
 import os.path
@@ -28,7 +30,11 @@ logging.basicConfig(level=logging_level,format='[%(lineno)d]:[%(asctime)s]:%(mes
 #https://stackoverflow.com/questions/57233053/chrome-fails-to-load-video-if-transferred-with-status-206-partial-content
 @blueprint.route('/results/<filename>',methods=['GET'])
 def get_file(filename):
-    response=send_file(os.path.join('video-result',filename), mimetype='video/mp4')
+    #TODO: refactor tmp file naming
+    try:
+        response=send_file(os.path.join('video-result',filename), mimetype='video/mp4')
+    except FileNotFoundError:
+        return ""
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
@@ -47,7 +53,8 @@ def inference():
         file_names=json.loads(request.form['file_names'])
         job_monitor.start_process(file_names)
         if num_videos==0 or num_videos==0:
-            return 'Please upload an image and a video!'
+            logging.info('Please at least upload a video and an image')
+            return jsonify({'message':'Please at least upload a video and an image'})
         logging.info(f"Images:{num_images} Videos {num_videos}")
         logging.info(f"Files: {request.files.keys()}")
         images_cv2=[]
@@ -77,7 +84,10 @@ def inference():
         name_list, known_embedding = det.loadIDFeats(images, images_cv2)
         logging.info(f"know embedding: {known_embedding}")
         for vid_index, vid_name in enumerate(videos):
-            frame_range=exec_one_video(video_cv2[vid_index], det,vid_index, known_embedding,vid_name,True)
+            if len(known_embedding)==0:
+                frame_range=[]
+            else:
+                frame_range=exec_one_video(video_cv2[vid_index], det,vid_index, known_embedding,vid_name,True)
             name, suffix = vid_name.split('.')
             return_metadata.append(["__RESULT__"+name+'.'+suffix,frame_range])
             video_cv2[vid_index].release()
@@ -97,6 +107,8 @@ def inference():
 #     if request.method=='POST':
 #         logging.debug(f"Progress Queried: {job_monitor.get_progress()}/100")
 #         return jsonify({'progress':job_monitor.get_progress()})
+
+
 
 @blueprint.route('/progress', methods=['GET'])
 def progress():
