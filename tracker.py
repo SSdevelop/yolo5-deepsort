@@ -130,11 +130,7 @@ def plot_bboxes(
         text = "{}-{}".format(cls_id, pos_id)
         if target:
             text = text + "TARGET"
-        import pytest
-        # pytest.set_trace()
         c1, c2 = (x1, y1), (x2, y2)
-        import pytest
-        # pytest.set_trace()
         cv2.rectangle(image, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
         tf = max(tl - 1, 1)  # font thickness
         t_size = cv2.getTextSize(cls_id, 0, fontScale=tl / 3, thickness=tf)[0]
@@ -181,8 +177,7 @@ def plot_bboxes(
 
     person_gravity_center = None
     suitcase_gravity_center = None
-    import pytest
-    # pytest.set_trace()
+
     logging.info(f"Current tracking {track_id}")
     for bbox in bboxes:
         # cls_id can be only person or suitcase
@@ -221,9 +216,6 @@ def update_tracker(target_detector, image, draw=True, target_track_id=None):
 
         outputs = deepsort.update(xywhs, confss, clss, image)
         logging.info(f"deepsort update: {outputs}")
-        import pytest
-        # pytest.set_trace()
-        # / logging.info("outputs:", outputs)
         bboxes2draw = []
         face_bboxes = []
         current_ids = []

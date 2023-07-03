@@ -144,7 +144,10 @@ class Model(nn.Module):
                 if m == self.model[0]:
                     logger.info(f"{'time (ms)':>10s} {'GFLOPS':>10s} {'params':>10s}  {'module'}")
                 logger.info(f'{dt[-1]:10.2f} {o:10.2f} {m.np:10.0f}  {m.type}')
-
+            #compatability
+            # Otherwise will raise: AttributeError: 'Upsample' object has no attribute 'recompute_scale_factor'
+            if isinstance(m, nn.Upsample):
+                m.recompute_scale_factor = None
             x = m(x)  # run
             y.append(x if m.i in self.save else None)  # save output
 
