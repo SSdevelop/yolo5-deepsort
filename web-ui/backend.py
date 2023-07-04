@@ -5,7 +5,7 @@ from progress_monitor import job_monitor
 import cv2
 import imutils
 import numpy as np
-video_result='web-ui/video-result'
+video_result='web-ui/videos'
 os.makedirs(video_result,exist_ok=True)
 from AIDetector_pytorch import Detector
 from demo import _nn_euclidean_distance

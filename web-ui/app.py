@@ -11,8 +11,6 @@ from AIDetector_pytorch import Detector
 from progress_monitor import job_monitor
 from flask import Blueprint
 blueprint = Blueprint('blueprint', __name__)
-tmp_dir='web-ui/tmp-store'
-os.makedirs(tmp_dir,exist_ok=True)
 
 @blueprint.after_request
 def after_request(response):
@@ -25,16 +23,40 @@ def after_request(response):
 logging_level = logging.DEBUG
 logging.basicConfig(level=logging_level,format='[%(lineno)d]:[%(asctime)s]:%(message)s')
 #https://www.javatpoint.com/flask-file-uploading#:~:text=The%20server%2Dside%20flask%20script,saved%20to%20some%20desired%20location.
-
-
+tmp_dir="web-ui/tmp-store"
+logging.info(f"Backend Running Dir: {os.getcwd()}")
 #https://stackoverflow.com/questions/57233053/chrome-fails-to-load-video-if-transferred-with-status-206-partial-content
-@blueprint.route('/results/<filename>',methods=['GET'])
+@blueprint.route('/files/<filename>',methods=['GET'])
 def get_file(filename):
+    logging.info(f"Route /files running on: {os.getcwd()}")
     #TODO: refactor tmp file naming
     try:
-        response=send_file(os.path.join('video-result',filename), mimetype='video/mp4')
+        response=send_file(os.path.join('web-ui','videos',filename), mimetype='video/mp4')
     except FileNotFoundError:
         return ""
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
+@blueprint.route('/thumbnails/<filename>',methods=['GET'])
+def get_thumbnail(filename):
+    logging.info(f"Route /files running on: {os.getcwd()}")
+    name, suffix = filename.split(".")
+    thumbnail_name=f'{name}_thumbnail.jpg'
+    thumbnail_path=f"./web-ui/thumbnails/{thumbnail_name}"
+    if not os.path.exists(thumbnail_path):
+        logging.info(f"Creating thumbnail for {filename}")
+        video_path=f"./web-ui/videos/{filename}"
+        if os.path.exists(video_path):
+            #create thumbnail for the video
+            logging.info(f"Video located for {filename}")
+            cap=cv2.VideoCapture(video_path)
+            success,image=cap.read()
+            height, width = image.shape[:2]
+            size = min(height, width)
+            cropped = image[:size, :size]
+            cv2.imwrite(thumbnail_path, cropped)
+            cap.release()
+            logging.info(f"Thumbnail {thumbnail_name} created")
+    response=send_file(f"./thumbnails/{thumbnail_name}", mimetype='image/jpeg')
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
@@ -119,4 +141,4 @@ app.register_blueprint(blueprint)
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
