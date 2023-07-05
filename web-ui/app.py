@@ -121,7 +121,10 @@ def inference():
             image = file_list['image{}'.format(i)]
             os.remove(os.path.join(tmp_dir, image.filename))
         job_monitor.end_process()
-        return jsonify(return_metadata)
+        response=jsonify(return_metadata)
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
     return "Only support POST Method"
 
 # @blueprint.route("/progress", methods=['POST'])
