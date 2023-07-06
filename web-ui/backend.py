@@ -14,7 +14,7 @@ logging.basicConfig(level=logging_level,format='[%(lineno)d]:[%(asctime)s]:%(mes
 
 
 #https://stackoverflow.com/questions/30103077/what-is-the-codec-for-mp4-videos-in-python-opencv
-def exec_one_video(cap: cv2.VideoCapture, det: Detector,index:int, embeds,vid_name=None,visualize=False):
+def exec_one_video(cap: cv2.VideoCapture, det: Detector,index:int, embeds,vid_name=None,visualize=False,use_monitor=False):
     fps = int(cap.get(5))
     logging.info(f'fps: {fps}')
     frame_count = 0
@@ -27,15 +27,15 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector,index:int, embeds,vid_na
     if vid_name is not None:
         #codec must be avc1 (h.264) to allowing playing in <video> element of html
         fourcc = cv2.VideoWriter_fourcc(*'avc1')
-        name,suffix=vid_name.split('.')
+        split_result=vid_name.split('.')[-2]
+        name,suffix=split_result[-2],split_result[-1]
         video_writer=cv2.VideoWriter(os.path.join(video_result,"__RESULT__"+name+'.'+suffix),fourcc,6,(int(cap.get(3)),int(cap.get(4))))
     lost_counter=20
     while True:
-        # if job_monitor.canceled():
-        #     return lost_frame_index
         success, im = cap.read()
         frame_count = frame_count + 1
-        job_monitor.increase(index)
+        if use_monitor:
+            job_monitor.increase(index)
         if im is None:
             logging.info(f"Read {frame_count} frames")
             break
@@ -89,12 +89,12 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector,index:int, embeds,vid_na
 if __name__ == '__main__':
     det = Detector(['person', 'suitcase'])
     #you can change vid names and img names yourself (relative path from project base dir)
-    vid_names=['IMG_1752.mp4']
-    img_names=['images/origin/1752.PNG']
+    vid_names=['./web-ui/IMG_1753.mp4']
+    img_names=['./web-ui/1753.PNG']
     cv2_img=[cv2.imread(name) for name in img_names]
     cv2_cap=[cv2.VideoCapture(name) for name in vid_names]
     name_list, known_embedding = det.loadIDFeats(img_names, cv2_img)
     result_list = []
     logging.info(f"know embedding: {known_embedding}")
     for index, vid_name in enumerate(vid_names):
-        result_list.append(exec_one_video(cv2_cap[index], det, known_embedding,vid_name,True))
+        result_list.append(exec_one_video(cv2_cap[index], det, index,known_embedding,vid_name,True,False))
