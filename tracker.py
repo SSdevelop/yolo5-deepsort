@@ -177,7 +177,6 @@ def plot_bboxes(
 
     person_gravity_center = None
     suitcase_gravity_center = None
-
     logging.info(f"Current tracking {track_id}")
     for bbox in bboxes:
         # cls_id can be only person or suitcase

@@ -46,24 +46,27 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector,index:int, embeds,vid_na
         if lost:
             lost_frame_index.append(frame_count)
         current_ids = result['current_ids']
-        logging.info(f"Current ids: {current_ids}")
+        logging.info(f"Current Tracking ids: {current_ids}")
         if len(DetFeatures) > 0 and not targetLocked:
             dist_matrix = _nn_euclidean_distance(embeds, DetFeatures, embeds[0])
             minimum = np.min(dist_matrix)
             minIndex = dist_matrix.argmin()
             if minimum > 0.5:
                 minIndex = -2
+                logging.info("Target not found")
+        logging.info(f'Previously Targeting: {conf_index}, This Frame Targetting: {minIndex}')
         if (minIndex == conf_index) & (minIndex != -2):
             trackingcounter = trackingcounter + 1
-            logging.info(f'conf_index: {conf_index}, minIndex: {minIndex}, trackingcounter, {trackingcounter}')
+            logging.info(f"Current tracking count {trackingcounter}")
         else:
             conf_index = minIndex
             trackingcounter = 0
-        if trackingcounter == 5:
+            logging.info(f"Tracking mismatch or target not found. Reset.")
+        if trackingcounter == 3:
             trackingcounter = 0
             if trackId is None:
                 trackId = current_ids[conf_index]
-                logging.info(f'trackId: {trackId}')
+                logging.info(f'Setting Tracking ID: {trackId}')
             det.targetTrackId = trackId
             targetLocked = True
         #save result
@@ -89,8 +92,9 @@ def exec_one_video(cap: cv2.VideoCapture, det: Detector,index:int, embeds,vid_na
 if __name__ == '__main__':
     det = Detector(['person', 'suitcase'])
     #you can change vid names and img names yourself (relative path from project base dir)
-    vid_names=['./web-ui/IMG_1753.mp4']
-    img_names=['./web-ui/1753.PNG']
+    video_index='6757'
+    vid_names=[f'./web-ui/IMG_{video_index}.mp4']
+    img_names=[f'./web-ui/{video_index}.PNG']
     cv2_img=[cv2.imread(name) for name in img_names]
     cv2_cap=[cv2.VideoCapture(name) for name in vid_names]
     name_list, known_embedding = det.loadIDFeats(img_names, cv2_img)

@@ -111,7 +111,6 @@ class Detector(baseDet):
     def detect(self, im):
 
         im0, img = self.preprocess(im)
-
         pred = self.m(img, augment=False)[0]
         pred = pred.float()
         pred = non_max_suppression(pred, self.threshold, 0.4)
@@ -175,9 +174,7 @@ class Detector(baseDet):
         '''
         加载目标人的特征
         '''
-        # 记录名字和特征值
-        name_list = []
-        known_embedding = []
+
         # 输入网络的所有人图片
         known_img_input = []
         known_boxes_input = []
