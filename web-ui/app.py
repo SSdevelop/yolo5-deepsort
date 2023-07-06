@@ -30,10 +30,7 @@ logging.info(f"Backend Running Dir: {os.getcwd()}")
 def get_file(filename):
     logging.info(f"Route /files running on: {os.getcwd()}")
     #TODO: refactor tmp file naming
-    try:
-        response=send_file(os.path.join('web-ui','videos',filename), mimetype='video/mp4')
-    except FileNotFoundError:
-        return ""
+    response=send_file(os.path.join('videos',filename))
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 @blueprint.route('/thumbnails/<filename>',methods=['GET'])
@@ -72,18 +69,19 @@ def inference():
         #files = request.files.getlist('file')
         # Iterate for each file in the files List, and Save them
         num_images,num_videos=int(request.form['num_images']),int(request.form['num_videos'])
-        file_names=json.loads(request.form['file_names'])
-        job_monitor.start_process(file_names)
+        video_names=json.loads(request.form['video_names'])
+        job_monitor.start_process(video_names)
         if num_videos==0 or num_videos==0:
             logging.info('Please at least upload a video and an image')
-            return jsonify({'message':'Please at least upload a video and an image'})
+            response=jsonify({'message':'Please at least upload a video and an image'})
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response
         logging.info(f"Images:{num_images} Videos {num_videos}")
         logging.info(f"Files: {request.files.keys()}")
         images_cv2=[]
         images=[]
         video_cv2=[]
         frame_count=[]
-        videos=[]
         return_metadata=[]
         file_list=request.files
         for i in range(num_images):
@@ -92,31 +90,33 @@ def inference():
             image.save(os.path.join(tmp_dir,image.filename))
             images_cv2.append(cv2.imread(os.path.join(tmp_dir,image.filename)))
         logging.info(f'Images: {images}')
-        for i in range(num_videos):
-            video = file_list['video{}'.format(i)]
-            videos.append(video.filename)
-            video.save(os.path.join(tmp_dir, video.filename))
-            vid_cap=cv2.VideoCapture(os.path.join(tmp_dir, video.filename))
+        logging.info(f'Videos: {video_names}')
+        for video_name in video_names:
+            video_path=f"./web-ui/videos/{video_name}"
+            vid_cap=cv2.VideoCapture(video_path)
+            if vid_cap is None:
+                logging.warning(f"Video loading from {video_path} failed.")
             video_cv2.append(vid_cap)
             frame_count.append(int(vid_cap.get(cv2.CAP_PROP_FRAME_COUNT)))
         job_monitor.set_frames(frame_count)
-        logging.info(f'Videos: {videos}')
         det = Detector(['person', 'suitcase'])
         # you can change vid names and img names yourself (relative path from project base dir)
         name_list, known_embedding = det.loadIDFeats(images, images_cv2)
         logging.info(f"know embedding: {known_embedding}")
-        for vid_index, vid_name in enumerate(videos):
+        for vid_index, vid_name in enumerate(video_names):
             if len(known_embedding)==0:
                 frame_range=[]
             else:
                 frame_range=exec_one_video(video_cv2[vid_index], det,vid_index, known_embedding,vid_name,True)
             name, suffix = vid_name.split('.')
-            return_metadata.append(["__RESULT__"+name+'.'+suffix,frame_range])
+            lost_start_moment=0
+            if len(frame_range)==0:
+                lost_start_moment="Lost Moment not Found"
+            else:
+                lost_start_moment=str(frame_range[0])
+            return_metadata.append(["__RESULT__"+name+'.'+suffix,lost_start_moment])
             video_cv2[vid_index].release()
         # clean up
-        for i in range(num_videos):
-            video = file_list['video{}'.format(i)]
-            os.remove(os.path.join(tmp_dir, video.filename))
         for i in range(num_images):
             image = file_list['image{}'.format(i)]
             os.remove(os.path.join(tmp_dir, image.filename))
@@ -127,16 +127,12 @@ def inference():
 
     return "Only support POST Method"
 
-# @blueprint.route("/progress", methods=['POST'])
-# def progress():
-#     if request.method=='POST':
-#         logging.debug(f"Progress Queried: {job_monitor.get_progress()}/100")
-#         return jsonify({'progress':job_monitor.get_progress()})
 
 
 
 @blueprint.route('/progress', methods=['GET'])
 def progress():
+    logging.info("Progress Request received")
     return jsonify(job_monitor.get_progress())
 
 app=Flask(__name__)
